@@ -1,0 +1,16 @@
+# 运行产物(审计日志、备份、缓存)——不要提交
+*.jsonl
+.backups/
+__pycache__/
+*.pyc
+
+# 密钥 / 环境变量文件——严禁提交
+.env
+*.key
+secrets*
+
+# 编辑器/系统杂项
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

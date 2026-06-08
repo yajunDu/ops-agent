@@ -1,0 +1,51 @@
+# 根因剧本:磁盘空间不足
+# 借鉴"故障排查决策树 + Ansible playbook":把运维专家的排查路径固定成数据。
+# 模型/引擎只负责"看证据下结论",不负责"从零推理路径"——快、可控、可解释。
+# 队友扩展新故障(高负载/OOM/端口不通/僵尸进程)只需照此格式新增一个 yaml 文件。
+
+id: disk-full
+title: 磁盘空间不足排查
+
+# 一、症状触发条件:编排器据此选中本剧本
+trigger:
+  keywords: ["磁盘满", "清理垃圾", "清理系统", "空间不足", "no space left"]
+
+# 二、取证步骤:按顺序调用只读工具,产出的字段汇入证据集
+steps:
+  - id: check_usage
+    tool: get_disk_usage
+    note: 查看各挂载点使用率,确认是否真的空间告急
+  - id: find_big
+    tool: find_large_files
+    args: { top: 5 }
+    note: 找出占用空间最大的文件,定位元凶
+
+# 三、根因结论:按顺序匹配,第一个条件全满足的胜出
+#   when 里的条件对照证据集:">=90" 是数值比较,"*_matches" 是路径通配匹配
+conclusions:
+  - id: binlog-overflow
+    when:
+      disk_usage_pct: ">=90"
+      largest_file_matches: "/var/lib/mysql/binlog*"
+    root_cause: "磁盘被 MySQL binlog 占满(很可能未配置 binlog 自动过期)"
+    confidence: high
+    # 候选修复动作 —— 注意:它会被提交给安全护栏裁决,而非直接执行
+    remediation:
+      tool: delete_file
+      arguments: { path: "{largest_file}" }
+
+  - id: applog-overflow
+    when:
+      disk_usage_pct: ">=90"
+      largest_file_matches: "/var/log/*"
+    root_cause: "磁盘被普通应用日志占满"
+    confidence: medium
+    remediation:
+      tool: truncate_file
+      arguments: { path: "{largest_file}" }
+
+  - id: inconclusive
+    when: {}        # 兜底:前面都不匹配时
+    root_cause: "未发现明显的大文件,需进一步排查 inode 耗尽或已删除但句柄未释放的文件"
+    confidence: low
+    remediation: null

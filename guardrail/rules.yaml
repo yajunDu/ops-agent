@@ -1,0 +1,29 @@
+# 风险规则库 (Rule Engine)
+# 借鉴 AWS IAM Policy 的 "Effect + Action + Condition":
+#   effect = 裁决档位, ops = 动作, asset_criticality = 命中资产的条件
+# 多条规则同时命中时,取"最严"的那条 (deny > require_confirm > warn > allow)。
+
+- id: deny-destroy-critical
+  effect: deny
+  match:
+    ops: [delete, truncate, chmod, move]
+    asset_criticality: [critical]
+  message: "禁止对关键资产执行破坏性操作"
+  suggest: "如需清理 MySQL binlog,使用 PURGE BINARY LOGS BEFORE ... 而非直接删除文件"
+
+- id: confirm-modify-system-config
+  effect: require_confirm
+  match:
+    ops: [delete, chmod, modify, truncate]
+    asset_criticality: [high]
+  requires: [confirm, snapshot]
+  message: "对系统关键配置的变更需人工确认,并在执行前自动创建配置快照"
+  suggest: "确认后将先快照当前配置,变更可一键回滚"
+
+- id: confirm-touch-critical-service
+  effect: require_confirm
+  match:
+    ops: [kill, restart]
+    asset_criticality: [high]
+  requires: [confirm]
+  message: "对关键服务的 kill/restart 需人工确认,避免远程失联或业务中断"

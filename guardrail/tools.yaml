@@ -1,0 +1,50 @@
+# 工具定义 (Tool Registry)
+# 借鉴 MCP / OpenAI function calling 的工具声明。
+# 两个字段是安全设计的关键:
+#   category: readonly(只读诊断,自动放行) | mutating(变更,必须过护栏)
+#   op:       这个工具实际执行的操作语义,供规则匹配
+#   target_arg: 哪个参数承载"被操作的目标"(路径/服务名)
+
+- name: get_disk_usage
+  category: readonly
+  op: read
+  risk_base: none
+- name: list_processes
+  category: readonly
+  op: read
+  risk_base: none
+- name: get_logs
+  category: readonly
+  op: read
+  risk_base: none
+
+- name: delete_file
+  category: mutating
+  op: delete
+  target_arg: path
+  risk_base: high
+- name: truncate_file
+  category: mutating
+  op: truncate
+  target_arg: path
+  risk_base: high
+- name: chmod_file
+  category: mutating
+  op: chmod
+  target_arg: path
+  risk_base: medium
+- name: edit_config
+  category: mutating
+  op: modify
+  target_arg: path
+  risk_base: medium
+- name: kill_process
+  category: mutating
+  op: kill
+  target_arg: name
+  risk_base: medium
+- name: restart_service
+  category: mutating
+  op: restart
+  target_arg: name
+  risk_base: medium

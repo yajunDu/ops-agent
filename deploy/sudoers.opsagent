@@ -1,0 +1,10 @@
+# /etc/sudoers.d/opsagent  —— 最小权限白名单(用 visudo -c 校验后再启用)
+# 仅授权 opsagent 账户在【无密码】下执行下列【精确命令】,其余一律拒绝。
+# 这就是"最小权限代理执行":Agent 主进程绝不以 root 运行,
+# 只有少数确需特权的运维动作,经此白名单逐条放行。
+
+opsagent ALL=(root) NOPASSWD: /usr/bin/systemctl restart mysqld
+opsagent ALL=(root) NOPASSWD: /usr/bin/systemctl restart nginx
+opsagent ALL=(root) NOPASSWD: /usr/bin/truncate -s 0 -- /var/log/*
+# 注意:不授权 rm、chmod 777、systemctl 任意服务等高危/泛化命令。
+# 任何需要新增的特权动作,都必须在此显式逐条登记,可审计、可回收。

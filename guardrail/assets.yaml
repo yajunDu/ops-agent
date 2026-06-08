@@ -1,0 +1,28 @@
+# 资产清单 (Asset Inventory)
+# 借鉴 AWS IAM Policy 的 "Resource" 维度:只描述"什么是受保护的资源",
+# 不描述"怎么处理"(那是 rules.yaml 的职责)。
+# 队友扩展时只需往这里加条目,无需改任何代码。
+
+- id: mysql-data
+  match:
+    path_glob: ["/var/lib/mysql/**", "/var/log/mysql/**"]
+  type: database
+  criticality: critical          # critical | high | medium | low
+  protected_ops: [delete, chmod, move, truncate]
+  note: "MySQL 数据与 binlog,直删会导致数据丢失或主从复制断裂"
+
+- id: system-config
+  match:
+    path_glob: ["/etc/**", "/boot/**"]
+  type: system_config
+  criticality: high
+  protected_ops: [delete, chmod, modify, truncate]
+  note: "系统关键配置,误改会导致服务异常或系统无法启动"
+
+- id: critical-services
+  match:
+    name_in: ["sshd", "mysqld", "kubelet", "firewalld"]
+  type: service
+  criticality: high
+  protected_ops: [kill, restart]
+  note: "关键服务,误杀 sshd 会导致远程失联,误杀 mysqld 会中断业务"
